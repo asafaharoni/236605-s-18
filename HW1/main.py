@@ -17,18 +17,30 @@ from models import *
 from utils import progress_bar
 from torch.autograd import Variable
 
+import numpy as np
+
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr_decay', '-d', action='store_true', help='learning rate decay')
+parser.add_argument('--lr_decay_rate', default=0.5, type=float, help='learning rate decay rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoints')
 parser.add_argument('--model', '-m', default='VGG16', help='type of model')
-parser.add_argument('--name', '-n', default='ckpt', help='name for save file')
+parser.add_argument('--name', '-n', default='', help='name for save file')
 parser.add_argument('--optimizer', '-o', default='SGD-with-momentum', help='type of optimizer')
 parser.add_argument('--epochs-to-run', '-e', default=200, type=int, help='num of epochs to run')
 args = parser.parse_args()
+if args.name == '':
+    args.name = args.model + '_' + args.optimizer + '_' + str(args.lr)
+    if args.lr_decay:
+        args.name = args.name + '_lr_decay'
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 acc_arr = []
+decay_num = 0
+improvement_needed = 0.5
+static_streak = 0
+last_epoct_decay = 0
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoints epoch
 
@@ -87,6 +99,7 @@ if args.resume:
     checkpoint = torch.load('./checkpoints/{}.t7'.format(args.name))
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
+    acc_arr = checkpoint['acc_arr']
     start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss() #Loss function
@@ -148,7 +161,7 @@ def test(epoch):
     acc = 100.*correct/total
     acc_arr.append(acc)
     if acc > best_acc:
-        print('Saving..')
+        print('Saving best..')
         state = {
             'net': net.state_dict(),
             'acc': acc,
@@ -157,10 +170,47 @@ def test(epoch):
         }
         if not os.path.isdir('checkpoints'):
             os.mkdir('checkpoints')
-        torch.save(state, './checkpoints/{}.t7'.format(args.name))
+        torch.save(state, './checkpoints/{}.best.t7'.format(args.name))
         best_acc = acc
+    if args.lr_decay and should_decay_lr(epoch):
+        print("Updating")
+        adjust_learning_rate()
+        global last_epoct_decay
+        global decay_num
+        last_epoct_decay = epoch
+        decay_num += 1
+
+
+def should_decay_lr(epoch):
+    global static_streak
+    if decay_num == 10:
+        return False
+    if epoch < last_epoct_decay + 10:
+        return False
+    if acc_arr[-1] < np.mean(acc_arr[-10:-4]) + improvement_needed:
+        static_streak += 1
+    return static_streak > 5
+
+
+def adjust_learning_rate():
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    lr = args.lr * (args.lr_decay_rate ** decay_num)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 
 for epoch in range(start_epoch, start_epoch + args.epochs_to_run):
     train(epoch)
     test(epoch)
+    if decay_num == 10:
+        break
+print('Saving..')
+state = {
+    'net': net.state_dict(),
+    'acc': acc_arr[-1],
+    'epoch': start_epoch + args.epochs_to_run - 1,
+    'acc_arr': acc_arr
+}
+if not os.path.isdir('checkpoints'):
+    os.mkdir('checkpoints')
+torch.save(state, './checkpoints/{}.t7'.format(args.name))
