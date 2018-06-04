@@ -14,7 +14,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-%matplotlib inline
 plt.rcParams['figure.figsize'] = (10.0, 8.0) # set default size of plots
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
@@ -52,6 +51,7 @@ def count_params(model):
     return param_count
 
 answers = np.load('gan-checks-tf.npz')
+print(answers['logits_fake'])
 
 class ChunkSampler(sampler.Sampler):
     """Samples elements sequentially from some offset. 
