@@ -51,7 +51,6 @@ def count_params(model):
     return param_count
 
 answers = np.load('gan-checks-tf.npz')
-print(answers['logits_fake'])
 
 class ChunkSampler(sampler.Sampler):
     """Samples elements sequentially from some offset. 
@@ -203,7 +202,7 @@ def discriminator_loss(logits_real, logits_fake):
     fake_loss = bce_loss(logits_fake,fake_labels)
 
     loss = fake_loss + real_loss
-    
+    print loss
     return loss
 
 def generator_loss(logits_fake):
