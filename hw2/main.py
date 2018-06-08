@@ -128,7 +128,7 @@ def initialize_weights(m):
     if isinstance(m, nn.Linear) or isinstance(m, nn.ConvTranspose2d):
         init.xavier_uniform_(m.weight.data)
 
-dtype = torch.cuda.FloatTensor
+dtype = torch.FloatTensor
 def discriminator():
     """
     Build and return a PyTorch model implementing the architecture above.
@@ -234,10 +234,11 @@ def test_generator_loss(logits_fake, g_loss_true):
 
 test_generator_loss(answers['logits_fake'], answers['g_loss_true'])
 
+
 def get_optimizer(model):
     optimizer = optim.Adam(model.parameters(), lr = 0.001 , betas=(0.5, 0.999))
     return optimizer
-
+'''
 def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_every=250, 
               batch_size=128, noise_size=96, num_epochs=10):
     """
@@ -284,7 +285,7 @@ def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show
                 print('Iter: {}, D: {:.4}, G:{:.4}'.format(iter_count,d_total_error.item(),g_error.item()))
                 imgs_numpy = fake_images.data.cpu().numpy()
                 show_images(imgs_numpy[0:16])
-                plt.savefig('plots/iter.{}.png'.format(iter_count))
+                plt.show()
                 print()
             iter_count += 1
 
@@ -299,4 +300,114 @@ D_solver = get_optimizer(D)
 G_solver = get_optimizer(G)
 # Run it!
 run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss)
+'''
 
+def ls_discriminator_loss(scores_real, scores_fake):
+    """
+    Compute the Least-Squares GAN loss for the discriminator.
+    
+    Inputs:
+    - scores_real: PyTorch Tensor of shape (N,) giving scores for the real data.
+    - scores_fake: PyTorch Tensor of shape (N,) giving scores for the fake data.
+    
+    Outputs:
+    - loss: A PyTorch Tensor containing the loss.
+    """
+    ones = torch.ones(scores_fake.size(0),scores_fake.size(1)).type(dtype)
+    fake_loss = scores_fake*scores_fake
+    real_loss = (scores_real - ones)*(scores_real - ones)
+    return ((fake_loss.mean())*0.5) + ((real_loss.mean())*0.5)
+
+def ls_generator_loss(scores_fake):
+    
+    ones = torch.ones(scores_fake.size(0),scores_fake.size(1)).type(dtype)
+    loss = (scores_fake - ones)*(scores_fake - ones)
+    
+    return (loss.mean())*0.5
+
+def test_lsgan_loss(score_real, score_fake, d_loss_true, g_loss_true):
+    score_real = torch.Tensor(score_real).type(dtype)
+    score_fake = torch.Tensor(score_fake).type(dtype)
+    d_loss = ls_discriminator_loss(score_real, score_fake).cpu().numpy()
+    g_loss = ls_generator_loss(score_fake).cpu().numpy()
+    print("Maximum error in d_loss: %g"%rel_error(d_loss_true, d_loss))
+    print("Maximum error in g_loss: %g"%rel_error(g_loss_true, g_loss))
+
+test_lsgan_loss(answers['logits_real'], answers['logits_fake'],
+                answers['d_loss_lsgan_true'], answers['g_loss_lsgan_true'])
+
+def build_dc_classifier():
+    """
+    Build and return a PyTorch model for the DCGAN discriminator implementing
+    the architecture above.
+    """
+    return nn.Sequential(
+        Unflatten(batch_size, 1, 28, 28),
+        nn.Conv2d(1, 32, kernel_size=(5, 5), stride=(1, 1)),
+        nn.LeakyReLU(0.01),
+        nn.MaxPool2d((2, 2), stride=2),
+        nn.Conv2d(32, 64, kernel_size=(5, 5), stride=(1, 1)),
+        nn.LeakyReLU(0.01),
+        nn.MaxPool2d((2, 2), stride=2),
+        Flatten(),
+        nn.Linear(1024, 1024, bias=True),
+        nn.LeakyReLU(0.01),
+        nn.Linear(1024, 1, bias=True)
+    )
+
+data = next(enumerate(loader_train))[-1][0].type(dtype)
+b = build_dc_classifier().type(dtype)
+out = b(data)
+print(out.size())
+
+def test_dc_classifer(true_count=1102721):
+    model = build_dc_classifier()
+    cur_count = count_params(model)
+    if cur_count != true_count:
+        print('Incorrect number of parameters in generator. Check your achitecture.')
+    else:
+        print('Correct number of parameters in generator.')
+
+test_dc_classifer()
+
+def build_dc_generator(noise_dim=NOISE_DIM):
+    """
+    Build and return a PyTorch model implementing the DCGAN generator using
+    the architecture described above.
+    """
+    return nn.Sequential(
+        nn.Linear(96, 1024, bias=True),
+        nn.ReLU(),
+        nn.BatchNorm1d(1024),
+        nn.Linear(1024, 6272, bias=True),
+        nn.ReLU(),
+        nn.BatchNorm1d(6272),
+        Unflatten(batch_size, 7, 7, 128),
+        nn.ConvTranspose2d(7, 64, kernel_size=(5, 5), stride=2),
+        nn.ReLU(),
+        nn.BatchNorm2d(64),
+        nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=2),
+        nn.Tanh(),
+        Flatten()
+    )
+
+test_g_gan = build_dc_generator().type(dtype)
+test_g_gan.apply(initialize_weights)
+
+fake_seed = torch.randn(batch_size, NOISE_DIM).type(dtype)
+fake_images = test_g_gan.forward(fake_seed)
+fake_images.size()
+
+
+
+def test_dc_generator(true_count=6580801):
+    model = build_dc_generator(4)
+    cur_count = count_params(model)
+    if cur_count != true_count:
+        print('Incorrect number of parameters in generator. Check your achitecture.')
+	print(cur_count)
+	print(true_count)
+    else:
+        print('Correct number of parameters in generator.')
+
+test_dc_generator()
