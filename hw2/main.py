@@ -383,7 +383,7 @@ def build_dc_generator(noise_dim=NOISE_DIM):
         nn.ReLU(),
         nn.BatchNorm1d(6272),
         Unflatten(batch_size, 7, 7, 128),
-        nn.ConvTranspose2d(7, 64, kernel_size=(5, 5), stride=2),
+        nn.ConvTranspose2d(7, 64, kernel_size=(4, 4), stride=2),
         nn.ReLU(),
         nn.BatchNorm2d(64),
         nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=2),
