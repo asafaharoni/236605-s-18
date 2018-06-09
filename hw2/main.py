@@ -376,14 +376,14 @@ def build_dc_generator(noise_dim=NOISE_DIM):
     the architecture described above.
     """
     return nn.Sequential(
-        nn.Linear(96, 1024, bias=True),
+        nn.Linear(noise_dim, 1024),
         nn.ReLU(),
         nn.BatchNorm1d(1024),
-        nn.Linear(1024, 6272, bias=True),
+        nn.Linear(1024, 6272),
         nn.ReLU(),
         nn.BatchNorm1d(6272),
         Unflatten(batch_size, 7, 7, 128),
-        nn.ConvTranspose2d(7, 64, kernel_size=(4, 4), stride=2),
+        nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=2),
         nn.ReLU(),
         nn.BatchNorm2d(64),
         nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=2),
