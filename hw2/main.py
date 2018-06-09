@@ -382,7 +382,7 @@ def build_dc_generator(noise_dim=NOISE_DIM):
         nn.Linear(1024, 6272),
         nn.ReLU(),
         nn.BatchNorm1d(6272),
-        Unflatten(batch_size, 7, 7, 128),
+        Unflatten(),
         nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=2),
         nn.ReLU(),
         nn.BatchNorm2d(64),
@@ -411,3 +411,13 @@ def test_dc_generator(true_count=6580801):
         print('Correct number of parameters in generator.')
 
 test_dc_generator()
+
+D_DC = build_dc_classifier().type(dtype) 
+D_DC.apply(initialize_weights)
+G_DC = build_dc_generator().type(dtype)
+G_DC.apply(initialize_weights)
+
+D_DC_solver = get_optimizer(D_DC)
+G_DC_solver = get_optimizer(G_DC)
+
+run_a_gan(D_DC, G_DC, D_DC_solver, G_DC_solver, discriminator_loss, generator_loss, num_epochs=5)
