@@ -384,13 +384,14 @@ def build_dc_generator(noise_dim=NOISE_DIM):
         nn.ReLU(),
         nn.BatchNorm1d(6272),
         Unflatten(),
-        nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=2),
+        nn.ConvTranspose2d(128, 64, kernel_size=(4, 4), stride=2, padding=1),
         nn.ReLU(),
         nn.BatchNorm2d(64),
-        nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=2),
+        nn.ConvTranspose2d(64, 1, kernel_size=(4, 4), stride=2, padding=1),
         nn.Tanh(),
         Flatten()
     )
+
 
 test_g_gan = build_dc_generator().type(dtype)
 test_g_gan.apply(initialize_weights)
@@ -398,7 +399,6 @@ test_g_gan.apply(initialize_weights)
 fake_seed = torch.randn(batch_size, NOISE_DIM).type(dtype)
 fake_images = test_g_gan.forward(fake_seed)
 fake_images.size()
-
 
 
 def test_dc_generator(true_count=6580801):
