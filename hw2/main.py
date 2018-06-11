@@ -18,6 +18,7 @@ plt.rcParams['figure.figsize'] = (10.0, 8.0) # set default size of plots
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
+
 def show_images(images):
     images = np.reshape(images, [images.shape[0], -1])  # images reshape to (batch_size, D)
     sqrtn = int(np.ceil(np.sqrt(images.shape[0])))
@@ -35,6 +36,7 @@ def show_images(images):
         ax.set_aspect('equal')
         plt.imshow(img.reshape([sqrtimg,sqrtimg]))
     return 
+
 
 def preprocess_img(x):
     return 2 * x - 1.0
@@ -238,7 +240,7 @@ test_generator_loss(answers['logits_fake'], answers['g_loss_true'])
 def get_optimizer(model):
     optimizer = optim.Adam(model.parameters(), lr = 0.001 , betas=(0.5, 0.999))
     return optimizer
-'''
+
 def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_every=250, 
               batch_size=128, noise_size=96, num_epochs=10):
     """
@@ -300,7 +302,6 @@ D_solver = get_optimizer(D)
 G_solver = get_optimizer(G)
 # Run it!
 run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss)
-'''
 
 def ls_discriminator_loss(scores_real, scores_fake):
     """
