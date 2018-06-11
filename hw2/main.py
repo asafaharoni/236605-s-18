@@ -130,7 +130,7 @@ def initialize_weights(m):
     if isinstance(m, nn.Linear) or isinstance(m, nn.ConvTranspose2d):
         init.xavier_uniform_(m.weight.data)
 
-dtype = torch.FloatTensor
+dtype = torch.cuda.FloatTensor
 def discriminator():
     """
     Build and return a PyTorch model implementing the architecture above.
